@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#05070f" />
+    <title>Puente Alto Street Racing - Carreras 3D online</title>
+  </head>
+  <body>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD de carrera -->
+    <div id="hud" class="hidden">
+      <div class="hud-top">
+        <div class="hud-chip"><span class="label">POS</span><b id="hud-pos">1/1</b></div>
+        <div class="hud-chip"><span class="label">VUELTA</span><b id="hud-lap">1/3</b></div>
+        <div class="hud-chip"><span class="label">TIEMPO</span><b id="hud-time">0:00.000</b></div>
+        <button id="btn-audio-hud" class="ghost small hud-audio" type="button" title="Silenciar audio">♪</button>
+        <button id="btn-quit-race" class="ghost small hud-quit">Salir</button>
+      </div>
+
+      <div id="countdown" class="countdown hidden">3</div>
+      <div id="hud-offroad" class="offroad hidden">¡FUERA DE PISTA!</div>
+
+      <div class="hud-bottom">
+        <div class="speedo">
+          <b id="hud-speed">0</b>
+          <span>km/h</span>
+        </div>
+      </div>
+      <div class="hud-help">WASD o flechas para conducir · ESPACIO frena en seco · R vuelve a la pista</div>
+    </div>
+
+    <!-- Menú principal -->
+    <div id="screen-menu" class="screen">
+      <div class="panel wide">
+        <div class="brand"><span class="neon">Puente Alto Street Racing</span>31</div>
+        <p class="tagline">
+          Carreras 3D online. Personaliza tu auto, crea una sala y compite con tus amigos en tiempo real.
+        </p>
+
+        <label class="field">
+          <span>Tu nombre</span>
+          <input id="input-name" maxlength="16" placeholder="Piloto" autocomplete="nickname" />
+        </label>
+
+        <div class="row gap">
+          <button id="btn-create" class="primary grow">Crear sala</button>
+          <button id="btn-garage-menu" class="ghost">Garage</button>
+        </div>
+
+        <div class="divider"><span>o únete con un código</span></div>
+
+        <div class="row gap">
+          <input id="input-code" class="code-input" maxlength="5" placeholder="CÓDIGO" autocomplete="off" spellcheck="false" />
+          <button id="btn-join" class="secondary">Unirse</button>
+        </div>
+
+        <p id="menu-error" class="error hidden"></p>
+
+        <div class="audio-card">
+          <div class="audio-head">
+            <span class="label">Audio</span>
+            <div class="row gap">
+              <button id="btn-music" class="ghost small" type="button">♪ Música</button>
+              <button id="btn-sound" class="ghost small" type="button">Motor</button>
+            </div>
+          </div>
+          <div class="audio-sliders">
+            <label><span>Música</span><input id="music-volume" type="range" min="0" max="100" step="1" /></label>
+            <label><span>Motor</span><input id="engine-volume" type="range" min="0" max="100" step="1" /></label>
+          </div>
+          <div class="audio-foot">
+            <span id="audio-source" class="audio-source">Return of the Tres</span>
+            <label class="file-button">
+              Cargar mi MP3
+              <input id="input-music-file" type="file" accept="audio/*" hidden />
+            </label>
+          </div>
+        </div>
+
+        <ul class="menu-tips">
+          <li>Hasta 6 pilotos por sala.</li>
+          <li>3 vueltas por carrera, con cuenta atrás sincronizada.</li>
+          <li>10 autos: Lada, Fiat 132, Chevette, LUV, Cavalier, Escarabajo, Falcon, Ritmo, D21 y V16.</li>
+          <li>Reparte 8 puntos de mejora entre velocidad, aceleración y agarre.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Sala de espera -->
+    <div id="screen-lobby" class="screen hidden">
+      <div class="panel wide">
+        <div class="lobby-head">
+          <div>
+            <span class="label">CÓDIGO DE SALA</span>
+            <div id="lobby-code" class="room-code">-----</div>
+          </div>
+          <button id="btn-copy" class="ghost small">Copiar invitación</button>
+        </div>
+
+        <ul id="lobby-players" class="players"></ul>
+
+        <div class="row gap wrap">
+          <button id="btn-ready" class="secondary">Estoy listo</button>
+          <button id="btn-start" class="primary">Iniciar carrera</button>
+        </div>
+        <div class="row gap wrap">
+          <button id="btn-garage-lobby" class="ghost">Garage</button>
+          <button id="btn-leave-lobby" class="ghost danger">Salir de la sala</button>
+        </div>
+
+        <p id="lobby-hint" class="hint"></p>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div id="screen-results" class="screen hidden">
+      <div class="panel">
+        <h2>Resultados</h2>
+        <ol id="results-list" class="results-list"></ol>
+        <div class="row gap wrap">
+          <button id="btn-again" class="primary hidden">Revancha</button>
+          <button id="btn-results-leave" class="ghost">Salir al menú</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Garage -->
+    <div id="screen-garage" class="screen hidden">
+      <div class="panel garage-panel">
+        <div class="garage-head">
+          <h2>Garage</h2>
+          <button id="btn-garage-close" class="ghost small">Cerrar</button>
+        </div>
+
+        <div class="garage-body">
+          <div class="preview-wrap">
+            <canvas id="garage-canvas"></canvas>
+            <span class="preview-hint">Vista previa</span>
+          </div>
+
+          <div class="garage-controls">
+            <section class="control-group">
+              <h3>Modelo</h3>
+              <div id="model-buttons" class="models"></div>
+            </section>
+
+            <section class="control-group">
+              <h3>Carrocería</h3>
+              <span class="sub">Color principal</span>
+              <div id="body-swatches" class="swatches"></div>
+              <label class="color-row">
+                <span>Color exacto</span>
+                <input type="color" id="input-color" />
+              </label>
+              <span class="sub">Detalles y llantas</span>
+              <div id="accent-swatches" class="swatches"></div>
+              <label class="color-row">
+                <span>Detalle exacto</span>
+                <input type="color" id="input-accent" />
+              </label>
+              <span class="sub">Acabado de pintura</span>
+              <div id="finish-buttons" class="styles"></div>
+              <span class="sub">Kit</span>
+              <div id="style-buttons" class="styles"></div>
+            </section>
+
+            <section class="control-group">
+              <h3>Piloto</h3>
+              <span class="sub">Elige tu personaje</span>
+              <div id="pilot-presets" class="presets"></div>
+            </section>
+
+            <section class="control-group">
+              <h3>Rendimiento <span id="points-left" class="points">8 pts</span></h3>
+              <div id="stats"></div>
+              <p class="hint">Reparte 8 puntos. No puedes tener todo al máximo.</p>
+            </section>
+          </div>
+        </div>
+
+        <div class="garage-foot">
+          <button id="btn-garage-save" class="primary">Guardar auto</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

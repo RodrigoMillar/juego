@@ -1,0 +1,6 @@
+Coloca aquí tu archivo "return-of-the-tres.mp3" (o cualquier MP3 renombrado).
+El juego intentará cargarlo automáticamente como música de fondo.
+
+Si el archivo no existe, suena una música synthwave original generada en el navegador.
+
+También puedes cargar un MP3 propio desde el menú de Audio.
