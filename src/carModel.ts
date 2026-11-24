@@ -15,6 +15,10 @@ const FALCON_GLB_PATH = '/models/chevrolet_falcon.glb';
 const RITMO_GLB_PATH = '/models/fiat_ritmo.glb';
 const D21_GLB_PATH = '/models/nissan_d21_1997.glb';
 const V16_GLB_PATH = '/models/nissan_v16_taxi.glb';
+const AMBULANCIA_GLB_PATH = '/models/ambulancia.glb';
+const BUS_GLB_PATH = '/models/bus.glb';
+const FIORINO_GLB_PATH = '/models/fiat_fiorino.glb';
+const VARIANT_GLB_PATH = '/models/volkswagen_variant.glb';
 
 export interface CarModel {
   group: THREE.Group;
@@ -443,6 +447,7 @@ function loadGlbCar(
   isWheel: (child: THREE.Object3D) => boolean,
   legacyGroup?: THREE.Object3D,
   rotation?: [number, number, number],
+  prepare?: (model: THREE.Object3D) => void,
 ): void {
   // Ocultamos el auto procedural de inmediato para que nunca se vea
   // superpuesto con el GLB mientras este termina de cargar.
@@ -461,6 +466,8 @@ function loadGlbCar(
     (gltf) => {
       const model = gltf.scene;
       model.name = path;
+
+      if (prepare) prepare(model);
 
       if (rotation) {
         model.rotation.set(rotation[0], rotation[1], rotation[2]);
@@ -1240,6 +1247,199 @@ function buildV16(group: THREE.Group, mats: CarMaterials, config: CarConfig): Ca
   return { group, wheels, length };
 }
 
+// ---------------------------------------------------------------------------
+// Ambulancia
+// ---------------------------------------------------------------------------
+function buildAmbulancia(group: THREE.Group, mats: CarMaterials, config: CarConfig): CarModel {
+  const width = 2.4;
+  const length = 5.8;
+  const radius = 0.4;
+  const bodyY = 1.05;
+
+  const legacyGroup = new THREE.Group();
+  legacyGroup.name = 'legacy-primitives';
+  group.add(legacyGroup);
+
+  rbox(legacyGroup, [width, 0.5, length * 0.92], 0.14, [0, bodyY - 0.35, 0], mats.body);
+  rbox(legacyGroup, [width * 0.94, 1.3, length * 0.72], 0.16, [0, bodyY + 0.35, -0.35], mats.body);
+  rbox(legacyGroup, [width * 0.86, 0.5, 0.5], 0.08, [0, bodyY + 0.7, length * 0.42], mats.glass);
+  rbox(legacyGroup, [width * 0.92, 0.06, length * 0.7], 0.03, [0, bodyY + 1.02, -0.35], mats.accent);
+
+  const wheels = addWheels(
+    group,
+    mats,
+    [
+      { radius, width: 0.3, x: -width / 2 + 0.05, z: length * 0.32, rim: 'steel' },
+      { radius, width: 0.3, x: width / 2 - 0.05, z: length * 0.32, rim: 'steel' },
+      { radius, width: 0.3, x: -width / 2 + 0.05, z: -length * 0.32, rim: 'steel' },
+      { radius, width: 0.3, x: width / 2 - 0.05, z: -length * 0.32, rim: 'steel' },
+    ],
+    mats.accent.color,
+  );
+
+  loadGlbCar(
+    AMBULANCIA_GLB_PATH,
+    group,
+    mats,
+    config,
+    wheels,
+    length,
+    () => false,
+    legacyGroup,
+    [0, Math.PI, 0],
+    (model) => {
+      // El GLB trae un plano de sombra enorme que infla el tamano del auto.
+      const stray: THREE.Object3D[] = [];
+      model.traverse((child) => {
+        if (/^shd/i.test(child.name)) stray.push(child);
+      });
+      for (const child of stray) child.removeFromParent();
+    },
+  );
+
+  addUnderglow(group, mats, width, length);
+  addShadow(group, width, length);
+  return { group, wheels, length };
+}
+
+// ---------------------------------------------------------------------------
+// Micro Bus
+// ---------------------------------------------------------------------------
+function buildBus(group: THREE.Group, mats: CarMaterials, config: CarConfig): CarModel {
+  const width = 1.9;
+  const length = 7.5;
+  const radius = 0.42;
+  const bodyY = 1.2;
+
+  const legacyGroup = new THREE.Group();
+  legacyGroup.name = 'legacy-primitives';
+  group.add(legacyGroup);
+
+  rbox(legacyGroup, [width, 2.1, length * 0.94], 0.16, [0, bodyY + 0.5, 0], mats.body);
+  rbox(legacyGroup, [width * 0.9, 0.7, length * 0.82], 0.08, [0, bodyY + 1.05, 0], mats.glass);
+  rbox(legacyGroup, [width * 0.96, 0.12, length * 0.9], 0.04, [0, bodyY + 1.62, 0], mats.accent);
+
+  const wheels = addWheels(
+    group,
+    mats,
+    [
+      { radius, width: 0.32, x: -width / 2 + 0.06, z: length * 0.31, rim: 'steel' },
+      { radius, width: 0.32, x: width / 2 - 0.06, z: length * 0.31, rim: 'steel' },
+      { radius, width: 0.32, x: -width / 2 + 0.06, z: -length * 0.3, rim: 'steel' },
+      { radius, width: 0.32, x: width / 2 - 0.06, z: -length * 0.3, rim: 'steel' },
+    ],
+    mats.accent.color,
+  );
+
+  loadGlbCar(
+    BUS_GLB_PATH,
+    group,
+    mats,
+    config,
+    wheels,
+    length,
+    () => false,
+    legacyGroup,
+  );
+
+  addUnderglow(group, mats, width, length);
+  addShadow(group, width, length);
+  return { group, wheels, length };
+}
+
+// ---------------------------------------------------------------------------
+// Fiat Fiorino
+// ---------------------------------------------------------------------------
+function buildFiorino(group: THREE.Group, mats: CarMaterials, config: CarConfig): CarModel {
+  const width = 1.75;
+  const length = 3.9;
+  const radius = 0.31;
+  const bodyY = 0.68;
+
+  const legacyGroup = new THREE.Group();
+  legacyGroup.name = 'legacy-primitives';
+  group.add(legacyGroup);
+
+  rbox(legacyGroup, [width, 0.56, length * 0.92], 0.14, [0, bodyY, 0], mats.body);
+  rbox(legacyGroup, [width * 0.9, 0.86, length * 0.62], 0.14, [0, bodyY + 0.55, -0.35], mats.body);
+  rbox(legacyGroup, [width * 0.8, 0.44, 0.12], 0.05, [0, bodyY + 0.62, length * 0.34], mats.glass);
+  rbox(legacyGroup, [width * 0.88, 0.4, 0.1], 0.04, [0, bodyY + 0.55, -length * 0.44], mats.glass);
+
+  const wheels = addWheels(
+    group,
+    mats,
+    [
+      { radius, width: 0.22, x: -width / 2 + 0.04, z: length * 0.32, rim: 'steel' },
+      { radius, width: 0.22, x: width / 2 - 0.04, z: length * 0.32, rim: 'steel' },
+      { radius, width: 0.22, x: -width / 2 + 0.04, z: -length * 0.31, rim: 'steel' },
+      { radius, width: 0.22, x: width / 2 - 0.04, z: -length * 0.31, rim: 'steel' },
+    ],
+    mats.accent.color,
+  );
+
+  loadGlbCar(
+    FIORINO_GLB_PATH,
+    group,
+    mats,
+    config,
+    wheels,
+    length,
+    () => false,
+    legacyGroup,
+    [0, Math.PI / 2, 0],
+  );
+
+  addUnderglow(group, mats, width, length);
+  addShadow(group, width, length);
+  return { group, wheels, length };
+}
+
+// ---------------------------------------------------------------------------
+// Volkswagen Variant (1965)
+// ---------------------------------------------------------------------------
+function buildVariant(group: THREE.Group, mats: CarMaterials, config: CarConfig): CarModel {
+  const width = 1.72;
+  const length = 4.4;
+  const radius = 0.33;
+  const bodyY = 0.6;
+
+  const legacyGroup = new THREE.Group();
+  legacyGroup.name = 'legacy-primitives';
+  group.add(legacyGroup);
+
+  rbox(legacyGroup, [width, 0.46, length * 0.94], 0.14, [0, bodyY, 0], mats.body);
+  rbox(legacyGroup, [width * 0.9, 0.5, length * 0.6], 0.14, [0, bodyY + 0.4, -0.25], mats.body);
+  rbox(legacyGroup, [width * 0.84, 0.42, length * 0.56], 0.1, [0, bodyY + 0.45, -0.25], mats.glass);
+  rbox(legacyGroup, [width * 0.9, 0.06, length * 0.5], 0.03, [0, bodyY + 0.68, -0.25], mats.body);
+
+  const wheels = addWheels(
+    group,
+    mats,
+    [
+      { radius, width: 0.24, x: -width / 2 + 0.04, z: length * 0.33, rim: 'steel' },
+      { radius, width: 0.24, x: width / 2 - 0.04, z: length * 0.33, rim: 'steel' },
+      { radius, width: 0.24, x: -width / 2 + 0.04, z: -length * 0.32, rim: 'steel' },
+      { radius, width: 0.24, x: width / 2 - 0.04, z: -length * 0.32, rim: 'steel' },
+    ],
+    mats.accent.color,
+  );
+
+  loadGlbCar(
+    VARIANT_GLB_PATH,
+    group,
+    mats,
+    config,
+    wheels,
+    length,
+    () => false,
+    legacyGroup,
+  );
+
+  addUnderglow(group, mats, width, length);
+  addShadow(group, width, length);
+  return { group, wheels, length };
+}
+
 const BUILDERS = {
   lada: buildLada,
   fiat: buildFiat,
@@ -1251,6 +1451,10 @@ const BUILDERS = {
   ritmo: buildRitmo,
   d21: buildD21,
   v16: buildV16,
+  ambulancia: buildAmbulancia,
+  bus: buildBus,
+  fiorino: buildFiorino,
+  variant: buildVariant,
 } as const;
 
 export function createCarModel(config: CarConfig): CarModel {

@@ -31,6 +31,8 @@ const rooms = new Map();
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const AVATAR_RE = /^pilots\/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp)$/i;
+const OLD_BODY_PURPLE = '#8b5cf6';
 const CAR_MODELS = [
   'lada',
   'fiat',
@@ -42,6 +44,10 @@ const CAR_MODELS = [
   'ritmo',
   'd21',
   'v16',
+  'ambulancia',
+  'bus',
+  'fiorino',
+  'variant',
 ];
 const CAR_FINISHES = ['gloss', 'matte', 'metal'];
 
@@ -71,7 +77,12 @@ function sanitizeCar(input) {
   const source = input && typeof input === 'object' ? input : {};
   const car = {
     model: CAR_MODELS.includes(source.model) ? source.model : 'lada',
-    color: typeof source.color === 'string' && HEX_RE.test(source.color) ? source.color : '#22d3ee',
+    color:
+      typeof source.color === 'string' &&
+      HEX_RE.test(source.color) &&
+      source.color.toLowerCase() !== OLD_BODY_PURPLE
+        ? source.color
+        : '#000000',
     accent: typeof source.accent === 'string' && HEX_RE.test(source.accent) ? source.accent : '#ff3ea5',
     style: clampInt(source.style, 0, 2),
     finish: CAR_FINISHES.includes(source.finish) ? source.finish : 'gloss',
@@ -95,12 +106,15 @@ function sanitizeCharacter(input) {
   const hex = (value, fallback) => (typeof value === 'string' && HEX_RE.test(value) ? value : fallback);
   const name = sanitizeName(source.name);
   const style = clampInt(source.hairStyle, 0, 3);
+  const avatar =
+    typeof source.avatar === 'string' && AVATAR_RE.test(source.avatar) ? source.avatar : undefined;
   return {
     name,
     skin: hex(source.skin, '#f1c27d'),
     hair: hex(source.hair, '#3b2f2f'),
     eyes: hex(source.eyes, '#2b6cb0'),
     hairStyle: style,
+    ...(avatar ? { avatar } : {}),
   };
 }
 function sanitizeState(input) {

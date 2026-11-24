@@ -4,7 +4,6 @@ import { GameAudio } from './audio/GameAudio';
 import { GaragePreview } from './ui/GaragePreview';
 import { request, socket } from './net';
 import {
-  CAR_FINISHES,
   CAR_MODELS,
   DEFAULT_CAR,
   MAX_STAT,
@@ -14,9 +13,7 @@ import {
   sanitizeName,
 } from './types';
 import type {
-  BodyStyle,
   CarConfig,
-  CarFinish,
   HairStyle,
   HudState,
   PeerState,
@@ -74,13 +71,9 @@ const btnResultsLeave = $<HTMLButtonElement>('#btn-results-leave');
 
 const garageCanvas = $<HTMLCanvasElement>('#garage-canvas');
 const inputColor = $<HTMLInputElement>('#input-color');
-const inputAccent = $<HTMLInputElement>('#input-accent');
 const bodySwatches = $('#body-swatches');
-const accentSwatches = $('#accent-swatches');
 const modelButtons = $('#model-buttons');
-const finishButtons = $('#finish-buttons');
 const pilotPresets = $('#pilot-presets');
-const styleButtons = $('#style-buttons');
 const statsEl = $('#stats');
 const pointsLeft = $('#points-left');
 const btnGarageClose = $<HTMLButtonElement>('#btn-garage-close');
@@ -221,23 +214,20 @@ function resetHud(): void {
 // ---------------------------------------------------------------------------
 // Garage
 // ---------------------------------------------------------------------------
-const BODY_COLORS = ['#22d3ee', '#ff3ea5', '#a3e635', '#f97316', '#8b5cf6', '#ef4444', '#facc15', '#e2e8f0'];
-const ACCENT_COLORS = ['#ff3ea5', '#22d3ee', '#a3e635', '#ffffff', '#f97316', '#8b5cf6', '#facc15', '#ef4444'];
-const STYLE_LABELS = ['Clásico', 'Deportivo', 'Rally'];
+const BODY_COLORS = ['#000000', '#22d3ee', '#ff3ea5', '#a3e635', '#f97316', '#ef4444', '#facc15', '#e2e8f0'];
 const STAT_DEFS: Array<{ key: 'speed' | 'accel' | 'grip'; label: string }> = [
   { key: 'speed', label: 'Velocidad punta' },
   { key: 'accel', label: 'Aceleración' },
   { key: 'grip', label: 'Agarre' },
 ];
 
-function buildSwatches(container: HTMLElement, colors: string[], target: 'color' | 'accent'): void {
+function buildSwatches(container: HTMLElement, colors: string[]): void {
   container.innerHTML = '';
   for (const color of colors) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'swatch';
     button.dataset.color = color;
-    button.dataset.target = target;
     button.style.setProperty('--swatch', color);
     button.title = color;
     button.setAttribute('aria-label', `Color ${color}`);
@@ -245,9 +235,19 @@ function buildSwatches(container: HTMLElement, colors: string[], target: 'color'
   }
 }
 
+function selectModel(value: string): void {
+  const model = CAR_MODELS.find((item) => item.id === value);
+  if (!model) return;
+
+  draftCar.model = model.id;
+  myCar = { ...myCar, model: model.id };
+  localStorage.setItem(CAR_KEY, JSON.stringify(myCar));
+  if (room) socket.emit('player:car', { car: myCar });
+  applyDraftVisual();
+}
+
 function buildGarageUi(): void {
-  buildSwatches(bodySwatches, BODY_COLORS, 'color');
-  buildSwatches(accentSwatches, ACCENT_COLORS, 'accent');
+  buildSwatches(bodySwatches, BODY_COLORS);
 
   modelButtons.innerHTML = '';
   for (const model of CAR_MODELS) {
@@ -263,54 +263,17 @@ function buildGarageUi(): void {
     modelButtons.appendChild(button);
   }
 
-  finishButtons.innerHTML = '';
-  for (const finish of CAR_FINISHES) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'style-btn';
-    button.dataset.finish = finish.id;
-    button.textContent = finish.label;
-    finishButtons.appendChild(button);
-  }
-
-  styleButtons.innerHTML = '';
-  STYLE_LABELS.forEach((label, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'style-btn';
-    button.dataset.style = String(index);
-    button.textContent = label;
-    styleButtons.appendChild(button);
+  bodySwatches.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button.swatch');
+    if (!button?.dataset.color) return;
+    draftCar.color = button.dataset.color;
+    applyDraftVisual();
   });
-
-  for (const container of [bodySwatches, accentSwatches]) {
-    container.addEventListener('click', (event) => {
-      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button.swatch');
-      if (!button?.dataset.color || !button.dataset.target) return;
-      draftCar[button.dataset.target as 'color' | 'accent'] = button.dataset.color;
-      applyDraftVisual();
-    });
-  }
 
   modelButtons.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button.model-btn');
     if (!button?.dataset.model) return;
-    draftCar.model = button.dataset.model as CarConfig['model'];
-    applyDraftVisual();
-  });
-
-  finishButtons.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button.style-btn');
-    if (!button?.dataset.finish) return;
-    draftCar.finish = button.dataset.finish as CarFinish;
-    applyDraftVisual();
-  });
-
-  styleButtons.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button.style-btn');
-    if (!button?.dataset.style) return;
-    draftCar.style = Number(button.dataset.style) as BodyStyle;
-    applyDraftVisual();
+    selectModel(button.dataset.model);
   });
 
   pilotPresets.innerHTML = '';
@@ -320,6 +283,9 @@ function buildGarageUi(): void {
     { name: 'Piwe', photo: 'pilots/piwe.jpg', skin: '#ffdbac', hair: '#8d5524', eyes: '#3d6b35', hairStyle: 3 },
     { name: 'Erwin', photo: 'pilots/erwin.jpg', skin: '#c68642', hair: '#000000', eyes: '#5a3825', hairStyle: 0 },
     { name: 'Tq-Leo', photo: 'pilots/tq-leo.jpg', skin: '#8d5524', hair: '#5a3825', eyes: '#2b6cb0', hairStyle: 1 },
+    { name: 'Kuyz', photo: 'pilots/Kuyz.jpg', skin: '#e0ac69', hair: '#241a12', eyes: '#3a2418', hairStyle: 2 },
+    { name: 'Leo', photo: 'pilots/Leo.jpg', skin: '#f1c27d', hair: '#2b1d12', eyes: '#2b4a6b', hairStyle: 1 },
+    { name: 'Juampy', photo: 'pilots/juampy.jpeg', skin: '#c68642', hair: '#1a1a1a', eyes: '#4a2f1f', hairStyle: 3 },
   ];
   for (const preset of presets) {
     const button = document.createElement('button');
@@ -337,7 +303,7 @@ function buildGarageUi(): void {
     button.appendChild(label);
 
     button.addEventListener('click', () => {
-      draftCar.character = { name: preset.name, skin: preset.skin, hair: preset.hair, eyes: preset.eyes, hairStyle: preset.hairStyle as HairStyle };
+      draftCar.character = { name: preset.name, skin: preset.skin, hair: preset.hair, eyes: preset.eyes, hairStyle: preset.hairStyle as HairStyle, avatar: preset.photo };
       applyDraftVisual();
       refreshGarage();
     });
@@ -346,11 +312,6 @@ function buildGarageUi(): void {
 
   inputColor.addEventListener('input', () => {
     draftCar.color = inputColor.value;
-    applyDraftVisual();
-  });
-
-  inputAccent.addEventListener('input', () => {
-    draftCar.accent = inputAccent.value;
     applyDraftVisual();
   });
 
@@ -440,25 +401,15 @@ function refreshAudioUi(): void {
 
 function refreshGarage(): void {
   inputColor.value = draftCar.color;
-  inputAccent.value = draftCar.accent;
-  for (const swatch of screenGarage.querySelectorAll<HTMLButtonElement>('button.swatch')) {
-    const target = swatch.dataset.target as 'color' | 'accent';
+  for (const swatch of bodySwatches.querySelectorAll<HTMLButtonElement>('button.swatch')) {
     swatch.classList.toggle(
       'active',
-      (swatch.dataset.color ?? '').toLowerCase() === draftCar[target].toLowerCase(),
+      (swatch.dataset.color ?? '').toLowerCase() === draftCar.color.toLowerCase(),
     );
   }
 
   for (const button of modelButtons.querySelectorAll<HTMLButtonElement>('button.model-btn')) {
     button.classList.toggle('active', button.dataset.model === draftCar.model);
-  }
-
-  for (const button of finishButtons.querySelectorAll<HTMLButtonElement>('button.style-btn')) {
-    button.classList.toggle('active', button.dataset.finish === draftCar.finish);
-  }
-
-  for (const button of styleButtons.querySelectorAll<HTMLButtonElement>('button.style-btn')) {
-    button.classList.toggle('active', Number(button.dataset.style) === draftCar.style);
   }
 
   renderStats();
@@ -537,10 +488,23 @@ function updateLobby(): void {
     card.className = 'player-card';
     if (player.id === socket.id) card.classList.add('is-me');
 
-    const dot = document.createElement('span');
-    dot.className = 'car-dot';
-    dot.style.background = player.car.color;
-    dot.style.boxShadow = `0 0 14px ${player.car.color}`;
+    const avatarPath = player.car.character?.avatar;
+    let marker: HTMLElement;
+    if (avatarPath) {
+      const img = document.createElement('img');
+      img.className = 'player-avatar';
+      img.src = `${import.meta.env.BASE_URL}${avatarPath}`;
+      img.alt = player.name;
+      img.style.borderColor = player.car.color;
+      img.style.boxShadow = `0 0 14px ${player.car.color}`;
+      marker = img;
+    } else {
+      const dot = document.createElement('span');
+      dot.className = 'car-dot';
+      dot.style.background = player.car.color;
+      dot.style.boxShadow = `0 0 14px ${player.car.color}`;
+      marker = dot;
+    }
 
     const info = document.createElement('div');
     info.className = 'player-info';
@@ -562,7 +526,7 @@ function updateLobby(): void {
       status.textContent = 'ESPERANDO';
     }
 
-    card.append(dot, info, status);
+    card.append(marker, info, status);
     lobbyPlayers.appendChild(card);
   }
 

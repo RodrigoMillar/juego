@@ -1,12 +1,12 @@
 import { io } from 'socket.io-client';
 
-// En Netlify solo se aloja el frontend. Para las salas hace falta un backend
-// Node aparte (Render, Railway, Fly.io, etc.). Configura su URL en Netlify con
-// la variable VITE_SERVER_URL, por ejemplo:
-//   VITE_SERVER_URL=https://puente-alto-racing.onrender.com
-const serverUrl = (import.meta.env.VITE_SERVER_URL as string | undefined)?.trim().replace(/\/+$/, '');
+const DEFAULT_SERVER_URL = 'https://juego-n0ch.onrender.com';
 
-export const socket = io(serverUrl || undefined, {
+const serverUrl =
+  (import.meta.env.VITE_SERVER_URL as string | undefined)?.trim().replace(/\/+$/, '') ||
+  DEFAULT_SERVER_URL;
+
+export const socket = io(serverUrl, {
   transports: ['websocket', 'polling'],
 });
 

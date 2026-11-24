@@ -107,6 +107,7 @@ export class Game {
   private readonly peers = new Map<string, PeerCar>();
   private readonly cameraLook = new THREE.Vector3();
 
+  private touchOverlay: HTMLDivElement | null = null;
   private raf = 0;
   private lastTime = 0;
   private disposed = false;
@@ -188,6 +189,7 @@ export class Game {
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+    this.setupTouchControls();
 
     options.audio?.startEngine();
 
@@ -210,6 +212,25 @@ export class Game {
     peer.speed = state.speed;
   }
 
+  setVirtualInput(
+    action: 'up' | 'down' | 'left' | 'right' | 'brake',
+    pressed: boolean,
+  ): void {
+    const map: Record<typeof action, string> = {
+      up: 'arrowup',
+      down: 'arrowdown',
+      left: 'arrowleft',
+      right: 'arrowright',
+      brake: 'space',
+    };
+    const key = map[action];
+    if (pressed) {
+      this.keys.add(key);
+    } else {
+      this.keys.delete(key);
+    }
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
@@ -218,6 +239,8 @@ export class Game {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     this.keys.clear();
+    this.touchOverlay?.remove();
+    this.touchOverlay = null;
 
     const materials = new Set<THREE.Material>();
     const textures = new Set<THREE.Texture>();
@@ -236,6 +259,71 @@ export class Game {
     this.renderer.dispose();
     this.renderer.setAnimationLoop(null);
     this.options.audio?.stopEngine();
+  }
+
+  private setupTouchControls(): void {
+    const isTouchDevice =
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia('(pointer: coarse)').matches;
+
+    if (!isTouchDevice) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'touch-controls';
+    overlay.setAttribute('aria-hidden', 'true');
+
+    overlay.innerHTML = `
+      <div class="touch-group touch-left">
+        <button type="button" class="touch-btn touch-steer" data-action="left">◀</button>
+        <button type="button" class="touch-btn touch-steer" data-action="right">▶</button>
+      </div>
+      <div class="touch-group touch-right">
+        <button type="button" class="touch-btn touch-reset" data-action="reset">↺</button>
+        <button type="button" class="touch-btn touch-brake" data-action="down">▼</button>
+        <button type="button" class="touch-btn touch-gas" data-action="up">▲</button>
+      </div>
+    `;
+
+    const bindButton = (btn: HTMLButtonElement) => {
+      const action = btn.dataset.action as
+        | 'up'
+        | 'down'
+        | 'left'
+        | 'right'
+        | 'brake'
+        | 'reset'
+        | undefined;
+      if (!action) return;
+
+      const release = (e: Event) => {
+        e.preventDefault();
+        btn.classList.remove('is-pressed');
+        if (action !== 'reset') {
+          this.setVirtualInput(action, false);
+        }
+      };
+
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        btn.setPointerCapture?.(e.pointerId);
+        btn.classList.add('is-pressed');
+        if (action === 'reset') {
+          this.resetToTrack();
+        } else {
+          this.setVirtualInput(action, true);
+        }
+      });
+
+      btn.addEventListener('pointerup', release);
+      btn.addEventListener('pointercancel', release);
+      btn.addEventListener('lostpointercapture', release);
+      btn.addEventListener('contextmenu', (e) => e.preventDefault());
+    };
+
+    overlay.querySelectorAll<HTMLButtonElement>('.touch-btn').forEach(bindButton);
+    document.body.appendChild(overlay);
+    this.touchOverlay = overlay;
   }
 
   private addLights(): void {

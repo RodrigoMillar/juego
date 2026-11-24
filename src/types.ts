@@ -7,6 +7,8 @@ export interface CharacterConfig {
   hair: string;
   eyes: string;
   hairStyle: HairStyle;
+  /** Ruta relativa a un retrato en public/pilots (opcional). */
+  avatar?: string;
 }
 
 export const DEFAULT_CHARACTER: CharacterConfig = {
@@ -26,7 +28,11 @@ export type CarModelId =
   | 'falcon'
   | 'ritmo'
   | 'd21'
-  | 'v16';
+  | 'v16'
+  | 'ambulancia'
+  | 'bus'
+  | 'fiorino'
+  | 'variant';
 export type CarFinish = 'gloss' | 'matte' | 'metal';
 
 export interface CarModel {
@@ -46,6 +52,10 @@ export const CAR_MODELS: ReadonlyArray<CarModel> = [
   { id: 'ritmo', name: 'Fiat Ritmo', year: '1978' },
   { id: 'd21', name: 'Nissan D21', year: '1997' },
   { id: 'v16', name: 'Nissan V16', year: '1995' },
+  { id: 'ambulancia', name: 'Ambulancia', year: '1990' },
+  { id: 'bus', name: 'Micro Bus', year: '1985' },
+  { id: 'fiorino', name: 'Fiat Fiorino', year: '1995' },
+  { id: 'variant', name: 'VW Variant', year: '1965' },
 ];
 
 export const CAR_FINISHES: ReadonlyArray<{ id: CarFinish; label: string }> = [
@@ -70,6 +80,7 @@ export function normalizeCharacter(input: unknown): CharacterConfig {
     hair: typeof src.hair === 'string' && HEX_RE.test(src.hair) ? src.hair : DEFAULT_CHARACTER.hair,
     eyes: typeof src.eyes === 'string' && HEX_RE.test(src.eyes) ? src.eyes : DEFAULT_CHARACTER.eyes,
     hairStyle: isHairStyle(src.hairStyle) ? src.hairStyle : DEFAULT_CHARACTER.hairStyle,
+    avatar: typeof src.avatar === 'string' && AVATAR_RE.test(src.avatar) ? src.avatar : undefined,
   };
 }
 
@@ -164,7 +175,7 @@ export interface HudState {
 
 export const DEFAULT_CAR: CarConfig = {
   model: 'lada',
-  color: '#22d3ee',
+  color: '#000000',
   accent: '#ff3ea5',
   style: 1,
   finish: 'gloss',
@@ -178,6 +189,7 @@ export const POINT_BUDGET = 8;
 export const MAX_STAT = 5;
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const AVATAR_RE = /^pilots\/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp)$/i;
 
 export function clampInt(value: unknown, min: number, max: number): number {
   const n = Math.round(Number(value));
@@ -189,7 +201,12 @@ export function normalizeCar(input: Partial<CarConfig> | null | undefined): CarC
   const src = input && typeof input === 'object' ? input : {};
   const car: CarConfig = {
     model: isCarModel(src.model) ? src.model : DEFAULT_CAR.model,
-    color: typeof src.color === 'string' && HEX_RE.test(src.color) ? src.color : DEFAULT_CAR.color,
+    color:
+      typeof src.color === 'string' &&
+      HEX_RE.test(src.color) &&
+      src.color.toLowerCase() !== '#8b5cf6'
+        ? src.color
+        : DEFAULT_CAR.color,
     accent: typeof src.accent === 'string' && HEX_RE.test(src.accent) ? src.accent : DEFAULT_CAR.accent,
     style: clampInt(src.style, 0, 2) as BodyStyle,
     finish: isCarFinish(src.finish) ? src.finish : DEFAULT_CAR.finish,

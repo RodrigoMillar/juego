@@ -7,7 +7,7 @@ Juego de carreras 3D arcade para navegador con salas online en tiempo real y aut
 - Carreras 3D con cámara persecutoria, 3 vueltas y hasta **6 pilotos** por sala.
 - Salas privadas con código de 5 caracteres y enlace de invitación (`?sala=CODIGO`).
 - Cuenta atrás sincronizada, HUD de posición/vuelta/tiempo/velocidad, aviso de fuera de pista y resultados finales.
-- **Garage** con vista previa 3D: 5 autos clásicos (Lada 2106, Fiat 132, Chevrolet Chevette, Chevrolet LUV, Chevrolet Cavalier), color principal y de detalles, acabado (brillante/mate/metalizado), 3 kits de carrocería y reparto de **8 puntos** entre velocidad, aceleración y agarre.
+- **Garage** con vista previa 3D: 14 autos (clásicos, camionetas, ambulancia, micro y van), color principal y de detalles, acabado (brillante/mate/metalizado), 3 kits de carrocería y reparto de **8 puntos** entre velocidad, aceleración y agarre.
 - Audio: motor sintetizado que responde al acelerador y música de fondo (intenta cargar `public/music/return-of-the-tres.mp3`; si no existe, suena un synthwave original; también puedes cargar tu propio MP3).
 - Física arcade: aceleración, frenada, marcha atrás, giro dependiente de la velocidad y roce contra las barreras.
 - Pintura y mejoras se guardan en `localStorage`.
